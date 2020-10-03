@@ -1,3 +1,4 @@
+import 'package:google_maps_webservice/places.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:smart_voyageurs/core/injection/injection_container.dart';
@@ -16,7 +17,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:smart_voyageurs/core/util/app_utils.dart';
 import 'package:smart_voyageurs/core/util/flash_helper.dart';
 
-
+BuildContext _buildContext;
 
 class HomePage extends StatefulWidget {
   final User user;
@@ -46,6 +47,7 @@ class _HomePageState extends State<HomePage> {
   final MobxHome _mobx = MobxHome();
   //final Mode _mode = Mode.overlay;
   final _positions = <Position>[];
+  final Mode _mode = Mode.overlay;
   Position _position;
   double _zoom = 14.0;
 
@@ -68,6 +70,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    _buildContext = context;
     var width = MediaQuery.of(context).size.width;
     return ResponsiveSafeArea(
       builder: (context) => Scaffold(
@@ -145,7 +148,13 @@ class _HomePageState extends State<HomePage> {
                             _mobx.setPolyLine(true);
                             _addPolyLine(value);
                           }
-                        }).whenComplete(() => LoadingDialog.hide(context));
+                        }).whenComplete(() {
+                          LoadingDialog.hide(context);
+                          String dis = sl<AppUtils>().calculateDistance(_mobx.latlngs);
+                          if (dis != null || dis.isNotEmpty) {
+                            FlashHelper.infoBar(context, message: "$dis km");
+                          }
+                        });
                       } else if (_mobx.markers.length < 1) {
                         _mobx.addMarker(location);
                         _mobx.addLatLng(location);
@@ -363,15 +372,15 @@ class _HomePageState extends State<HomePage> {
                                       },
                                       color: Colors.pink,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20.0),
+                                        borderRadius: BorderRadius.circular(6.0),
                                       ),
                                       child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
+                                        padding: const EdgeInsets.all(5.0),
                                         child: Text(
                                           'Show Route'.toUpperCase(),
                                           style: TextStyle(
                                             color: Colors.white,
-                                            fontSize: 20.0,
+                                            fontSize: 15.0,
                                           ),
                                         ),
                                       ),
@@ -387,6 +396,7 @@ class _HomePageState extends State<HomePage> {
                   ],
 
 
+                  /*
                   Column(
                     children: <Widget>[
                       Flexible(
@@ -410,23 +420,172 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
 
+                   */
+
                 ],
               ),
             );
           },
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: FloatingActionButton(
-          child: Icon(MdiIcons.directions),
-          onPressed: () async {
-            print(polylineCoordinates.length);
+        floatingActionButton: Observer(
+          builder: (_) => FloatingActionButton(
+            child: Icon(_mobx.isSearch ? Icons.clear : Icons.search),
+            onPressed: () async {
+              ///! Clear data
+              _mobx.markers.clear();
+              _mobx.latlngs.clear();
+              _mobx.polylines.clear();
+              _mobx.setPolyLine(false);
+              for (int i = 0; i < _mobx.isSelected.length; i++) {
+                _mobx.isSelected[i] = false;
+              }
+              _mobx.isSelected[0] = true;
 
-          },
+              ///! Clear and Start
+              await _handlePressButton(context);
+
+              // _startController.clear();
+              // _destinationController.clear();
+              // _mobx.setSearch(_mobx.isSearch ? false : true);
+
+            },
+          ),
         ),
       ),
     );
   }
 
+  Future<void> _handlePressButton(BuildContext context) async {
+    try {
+      Prediction p = await PlacesAutocomplete.show(
+        context: context, apiKey: googleAPIKey,
+        onError: onError, mode: _mode, language: "ma",
+        components: [Component(Component.country, "ma")],
+      );
+
+      if (p != null) {
+        final GoogleMapsPlaces _places = GoogleMapsPlaces(apiKey: googleAPIKey);
+        PlacesDetailsResponse detail = await _places.getDetailsByPlaceId(p.placeId);
+        String address = detail.result.adrAddress
+            .replaceAll('</span>, <span class="', ' ')
+            .replaceAll('<span class="locality">', '')
+            .replaceAll('country-name">', '')
+            .replaceAll('</span>', '');
+        double latitude = detail.result.geometry.location.lat;
+        double longitude = detail.result.geometry.location.lng;
+
+        _mobx.addMarker(LatLng(latitude, longitude));
+        _mobx.addLatLng(LatLng(latitude, longitude));
+
+        _mapController.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: LatLng(latitude, longitude), zoom: _zoom),
+          ),
+        );
+
+
+        if (_mobx.markers.length == 1) {
+          print("_mobx.markers.length < 1: ${_mobx.markers.length}");
+          await Future.delayed(Duration(seconds: 2)).whenComplete(() async {
+            await _handlePressButton(_buildContext);
+          });
+        } else if (_mobx.markers.length == 2) {
+          print("_mobx.markers.length == 1: ${_mobx.markers.length}");
+          LoadingDialog.show(context);
+          await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode.first).then((value) {
+            if (value.isNotEmpty) {
+              _mobx.setPolyLine(true);
+              _addPolyLine(value);
+            }
+          }).whenComplete(() async {
+            LoadingDialog.hide(context);
+            String dis = sl<AppUtils>().calculateDistance(_mobx.latlngs);
+            if (dis != null || dis.isNotEmpty) {
+              FlashHelper.infoBar(context, message: "$dis km");
+            }
+          });
+        } else {
+          _mobx.markers.clear();
+          _mobx.latlngs.clear();
+          _mobx.polylines.clear();
+          _mobx.setPolyLine(false);
+        }
+
+      }
+
+      // await displayPrediction(context, p);
+    } catch(_) {}
+  }
+
+  void onError(PlacesAutocompleteResponse response) {
+    searchScaffoldKey.currentState.showSnackBar(
+      SnackBar(content: Text(response.errorMessage)),
+    );
+  }
+
+  Future<Null> displayPrediction(BuildContext context, Prediction p) async {
+    try {
+      if (p != null) {
+        final GoogleMapsPlaces _places = GoogleMapsPlaces(apiKey: googleAPIKey);
+        PlacesDetailsResponse detail = await _places.getDetailsByPlaceId(p.placeId);
+        String address = detail.result.adrAddress
+            .replaceAll('</span>, <span class="', ' ')
+            .replaceAll('<span class="locality">', '')
+            .replaceAll('country-name">', '')
+            .replaceAll('</span>', '');
+        double latitude = detail.result.geometry.location.lat;
+        double longitude = detail.result.geometry.location.lng;
+
+        _mobx.addMarker(LatLng(latitude, longitude));
+        _mobx.addLatLng(LatLng(latitude, longitude));
+
+        _mapController.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: LatLng(latitude, longitude), zoom: _zoom),
+          ),
+        );
+
+
+        if (_mobx.latlngs.length == 1) {
+          print("_mobx.markers.length == 1: ${_mobx.latlngs.length}");
+          await Future.delayed(Duration(seconds: 2)).whenComplete(() async {
+            await _handlePressButton(_buildContext);
+          });
+        } else if (_mobx.latlngs.length == 2) {
+          print("_mobx.markers.length == 2: ${_mobx.latlngs.length}");
+          LoadingDialog.show(context);
+          await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode.first).then((value) {
+            if (value.isNotEmpty) {
+              _mobx.setPolyLine(true);
+              _addPolyLine(value);
+            }
+          }).whenComplete(() => LoadingDialog.hide(context));
+        } else {
+          _mobx.markers.clear();
+          _mobx.latlngs.clear();
+          _mobx.polylines.clear();
+          _mobx.setPolyLine(false);
+        }
+
+
+      }
+    } catch(_) {}
+  }
+
+  getInoutDecoration(hint, icon) {
+    return InputDecoration(
+      icon: Container(
+        margin: EdgeInsets.only(left: 20, top: 5),
+        width: 10,
+        height: 10,
+        child:icon ,
+      ),
+      hintText: hint,
+      border: InputBorder.none,
+      contentPadding: EdgeInsets.only(left: 15.0, top: 16.0),
+    );
+  }
 
   /*
   Future<bool> _calculateDistance() async {
@@ -562,6 +721,7 @@ class _HomePageState extends State<HomePage> {
 
    */
 
+  /*
   _getPolyline(List<LatLng> latlngs) async {
     print(latlngs.map((e) => e));
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
@@ -580,6 +740,8 @@ class _HomePageState extends State<HomePage> {
     //_addPolyLine();
   }
 
+  */
+
   _addPolyLine(List<LatLng> latLngs) {
     PolylineId id = PolylineId("poly");
     Polyline polyline = Polyline(polylineId: id, color: Colors.red, points: latLngs, width: 2);
@@ -587,4 +749,6 @@ class _HomePageState extends State<HomePage> {
     polylines[id] = polyline;
     setState(() {});
   }
+
+
 }

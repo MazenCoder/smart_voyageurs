@@ -100,7 +100,7 @@ class FlashHelper {
     BuildContext context, {
     String title,
     @required String message,
-    Duration duration = const Duration(seconds: 3),
+    Duration duration = const Duration(seconds: 5),
   }) {
     return showFlash<T>(
       context: context,
