@@ -12,5 +12,9 @@ abstract class AppUtils extends ChangeNotifier {
   Future<void> logOut();
   Future<List<LatLng>> getRoute(List<LatLng> latLngs, String mode);
   String calculateDistance(List<LatLng> latlngs);
+  Future<List<Polyline>> getAllPolyline();
+  // bool checkPointOverlapping(var location, var list);
+  Future<void> checkPointOverlapping(var location);
+  Future<bool> pointInPolygon(var locations, String mode);
 
 }

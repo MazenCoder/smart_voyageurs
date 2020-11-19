@@ -162,7 +162,7 @@ class _CreateAccountState extends State<CreateAccount> with SingleTickerProvider
                               _passwordController.clear();
                               LoadingDialog.hide(context);
                               FlashHelper.successBar(context, message: 'successfully'.tr());
-                              await Future.delayed(Duration(seconds: 3))
+                              await Future.delayed(Duration(seconds: 1))
                                 .whenComplete(() => Navigator.pop(context),
                               );
                             });

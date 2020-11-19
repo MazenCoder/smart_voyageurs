@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:smart_voyageurs/features/login/domain/usecases/input_login.dart';
 import 'package:smart_voyageurs/core/injection/injection_container.dart';
 import 'package:smart_voyageurs/core/database/app_database.dart';
@@ -8,6 +9,7 @@ import 'package:smart_voyageurs/core/error/exceptions.dart';
 import 'package:smart_voyageurs/core/util/keys.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:http/http.dart' as http;
+import 'package:poly/poly.dart' as poly;
 import 'package:crypto/crypto.dart';
 import 'package:logger/logger.dart';
 import 'dart:convert' as convert;
@@ -214,5 +216,195 @@ class AppUtilsImpl extends AppUtils {
     return 12742 * asin(sqrt(a));
   }
 
+
+  @override
+  Future<List<Polyline>> getAllPolyline() async {
+    try {
+      List<Polyline> _polylines = [];
+
+      List<InfoRoute> infoRoutes = await database.infoRoutesDao.getAllInfoRoutes();
+
+      for (InfoRoute info in infoRoutes) {
+        List<DrawRoute> routes = await database.drawRoutesDao.getRoutesByIdRout(info.id);
+
+        List<LatLng> points = <LatLng>[];
+        for (DrawRoute point in routes) {
+          var latLng = LatLng(point.latitude, point.longitude);
+          points.add(latLng);
+        }
+        _polylines.add(Polyline(
+            polylineId: PolylineId(info.id),
+            points: points, width: 3,
+            color: Colors.blue[200]
+        ));
+      }
+
+      return _polylines;
+    } catch(e) {
+      print('error: -> $e');
+    }
+  }
+
+  @override
+  Future<void> checkPointOverlapping(var locations) async {
+    ///! init list points
+    // List<Point<num>> _listLocation = [];
+    // for (var val in locations) {
+    //   // if (!val.inside) {
+    //   _listLocation.add(Point(val.latitude, val.longitude));
+    //   // }
+    // }
+
+    List<InfoRoute> infoRoutes = await database.infoRoutesDao.getAllInfoRoutes();
+
+    for (InfoRoute info in infoRoutes) {
+      List<DrawRoute> routes = await database.drawRoutesDao.getRoutesByIdRout(info.id);
+
+      List<LatLng> _cachePoints = <LatLng>[];
+      for (DrawRoute point in routes) {
+        var latLng = LatLng(point.latitude, point.longitude);
+        _cachePoints.add(latLng);
+      }
+
+      ///! check point
+      List<Point<num>> _listCachePoints = [];
+
+      for (var val in _cachePoints) {
+        // if (!val.inside) {
+        _listCachePoints.add(Point(val.latitude, val.longitude));
+        // }
+      }
+
+
+      List<bool> _listChecked = [];
+      for (var val in locations) {
+        // if (!val.inside) {
+        Point in1 = Point(val.latitude, val.longitude);
+        poly.Polygon testPolygon = poly.Polygon(_listCachePoints);
+        print('----------------------------');
+        print(testPolygon.isPointInside(in1));
+        if (testPolygon.isPointInside(in1)) {
+          _listChecked.add(testPolygon.isPointInside(in1));
+        }
+        print(_listChecked.length);
+      }
+
+      //poly.Polygon _polygon = poly.Polygon(_listCachePoints);
+      // poly.Polygon _polygon = poly.Polygon(_listLocation);
+
+      // Point in1 = Point(location.latitude, location.longitude);
+      // List<Point<num>> notInsidePoints = []..addAll(_listCachePoints);//..addAll([Point(75, 90)]);
+      // List<bool> listOfPoint = _polygon.getList_IsListOfPointInside(notInsidePoints);
+
+
+    }
+
+
+
+    // List<Point<num>> l = [];
+    //
+    // for (var val in list) {
+    //   if (!val.inside) {
+    //     l.add(Point(val.latitude, val.longitude));
+    //   }
+    // }
+    // /// List of Points can be passed as parameter to constructor Polygon()
+    // poly.Polygon testPolygon = poly.Polygon(l);
+    // Point in1 = Point(location.latitude, location.longitude);
+    //
+    // List<Point<num>> notInsidePoints = []..addAll(l)..addAll([Point(75, 90)]);
+    //
+    // List<bool> listOfPoint = testPolygon.getList_IsListOfPointInside(notInsidePoints);
+    // print("listOfPoint: $listOfPoint");
+    //
+    // return testPolygon.isPointInside(in1);
+
+  }
+
+
+  @override
+  Future<bool> pointInPolygon(var locations, String mode) async {
+    print('mode -> $mode');
+
+    List<InfoRoute> infoRoutes = await database.infoRoutesDao.getInfoRoutesByType(mode);
+
+    for (InfoRoute info in infoRoutes) {
+      List<DrawRoute> routes = await database.drawRoutesDao.getRoutesByIdRout(info.id);
+
+      List<LatLng> points = <LatLng>[];
+      for (DrawRoute point in routes) {
+        var latLng = LatLng(point.latitude, point.longitude);
+        points.add(latLng);
+      }
+
+      Polygon testPolygon = Polygon(
+        polygonId: PolygonId(info.id),
+        points: points,
+      );
+
+      List<bool> _listChecked = [];
+      for (var val in locations) {
+        bool isInside = _pointInPolygon(val, testPolygon) ?? false;
+        if (isInside) {
+          _listChecked.add(isInside);
+        }
+      }
+
+      print('isInside: $_listChecked');
+      if (_listChecked.isNotEmpty)
+        return true;
+      return false;
+    }
+
+  }
+
+  bool _pointInPolygon(LatLng position, Polygon polygon) {
+
+
+
+    // Check if the point sits exactly on a vertex
+    var vertexPosition = polygon.points.firstWhere((point) => point == position, orElse: () => null);
+    if (vertexPosition != null) {
+      return true;
+    }
+
+    // Check if the point is inside the polygon or on the boundary
+    int intersections = 0;
+    var verticesCount = polygon.points.length;
+
+    for (int i = 1; i < verticesCount; i++) {
+      LatLng vertex1 = polygon.points[i - 1];
+      LatLng vertex2 = polygon.points[i];
+
+      // Check if point is on an horizontal polygon boundary
+      if (vertex1.latitude == vertex2.latitude &&
+          vertex1.latitude == position.latitude &&
+          position.longitude > min(vertex1.longitude, vertex2.longitude) &&
+          position.longitude < max(vertex1.longitude, vertex2.longitude)) {
+        return true;
+      }
+
+      if (position.latitude > min(vertex1.latitude, vertex2.latitude) &&
+          position.latitude <= max(vertex1.latitude, vertex2.latitude) &&
+          position.longitude <= max(vertex1.longitude, vertex2.longitude) &&
+          vertex1.latitude != vertex2.latitude) {
+        var xinters = (position.latitude - vertex1.latitude) *
+            (vertex2.longitude - vertex1.longitude) /
+            (vertex2.latitude - vertex1.latitude) +
+            vertex1.longitude;
+        if (xinters == position.longitude) {
+          // Check if point is on the polygon boundary (other than horizontal)
+          return true;
+        }
+        if (vertex1.longitude == vertex2.longitude ||
+            position.longitude <= xinters) {
+          intersections++;
+        }
+      }
+    }
+
+    // If the number of edges we passed through is odd, then it's in the polygon.
+    return intersections % 2 != 0;
+  }
 
 }

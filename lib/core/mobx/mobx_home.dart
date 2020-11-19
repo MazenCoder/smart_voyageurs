@@ -8,7 +8,7 @@ class MobxHome = MobxHomeBase with _$MobxHome;
 abstract class MobxHomeBase with Store {
 
   @observable
-  ObservableList<bool> isSelected = ObservableList<bool>.of([true, false, false]);
+  ObservableList<bool> isSelected = ObservableList<bool>.of([true, false, false, false]);
 
   @observable
   ObservableList<Marker> markers = ObservableList<Marker>();
@@ -94,4 +94,21 @@ abstract class MobxHomeBase with Store {
   @action
   void setQuery(String search) => this.query = search;
 
+  @observable
+  String type = '';
+
+  @action
+  void setType(String val) => this.type = val.trim();
+
+  @observable
+  String mode = '';
+
+  @action
+  void setMode(String val) => this.mode = val;
+
+  @observable
+  bool cutPolygon = false;
+
+  @action
+  void setCutPolygon(bool val) => this.cutPolygon = val ?? false;
 }

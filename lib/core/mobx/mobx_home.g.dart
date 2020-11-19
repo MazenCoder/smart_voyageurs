@@ -174,6 +174,51 @@ mixin _$MobxHome on MobxHomeBase, Store {
     });
   }
 
+  final _$typeAtom = Atom(name: 'MobxHomeBase.type');
+
+  @override
+  String get type {
+    _$typeAtom.reportRead();
+    return super.type;
+  }
+
+  @override
+  set type(String value) {
+    _$typeAtom.reportWrite(value, super.type, () {
+      super.type = value;
+    });
+  }
+
+  final _$modeAtom = Atom(name: 'MobxHomeBase.mode');
+
+  @override
+  String get mode {
+    _$modeAtom.reportRead();
+    return super.mode;
+  }
+
+  @override
+  set mode(String value) {
+    _$modeAtom.reportWrite(value, super.mode, () {
+      super.mode = value;
+    });
+  }
+
+  final _$cutPolygonAtom = Atom(name: 'MobxHomeBase.cutPolygon');
+
+  @override
+  bool get cutPolygon {
+    _$cutPolygonAtom.reportRead();
+    return super.cutPolygon;
+  }
+
+  @override
+  set cutPolygon(bool value) {
+    _$cutPolygonAtom.reportWrite(value, super.cutPolygon, () {
+      super.cutPolygon = value;
+    });
+  }
+
   final _$MobxHomeBaseActionController = ActionController(name: 'MobxHomeBase');
 
   @override
@@ -276,6 +321,39 @@ mixin _$MobxHome on MobxHomeBase, Store {
   }
 
   @override
+  void setType(String val) {
+    final _$actionInfo = _$MobxHomeBaseActionController.startAction(
+        name: 'MobxHomeBase.setType');
+    try {
+      return super.setType(val);
+    } finally {
+      _$MobxHomeBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void setMode(String val) {
+    final _$actionInfo = _$MobxHomeBaseActionController.startAction(
+        name: 'MobxHomeBase.setMode');
+    try {
+      return super.setMode(val);
+    } finally {
+      _$MobxHomeBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void setCutPolygon(bool val) {
+    final _$actionInfo = _$MobxHomeBaseActionController.startAction(
+        name: 'MobxHomeBase.setCutPolygon');
+    try {
+      return super.setCutPolygon(val);
+    } finally {
+      _$MobxHomeBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
   String toString() {
     return '''
 isSelected: ${isSelected},
@@ -288,7 +366,10 @@ alert: ${alert},
 isSearch: ${isSearch},
 isPolyLine: ${isPolyLine},
 currentIndex: ${currentIndex},
-query: ${query}
+query: ${query},
+type: ${type},
+mode: ${mode},
+cutPolygon: ${cutPolygon}
     ''';
   }
 }

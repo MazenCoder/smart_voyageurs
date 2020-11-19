@@ -1,3 +1,5 @@
+import 'package:smart_voyageurs/core/model/draw_routes.dart';
+import 'package:smart_voyageurs/core/model/info_routes.dart';
 import 'package:smart_voyageurs/core/model/users.dart';
 import 'package:moor_flutter/moor_flutter.dart';
 import 'package:moor/moor.dart';
@@ -8,10 +10,14 @@ part 'app_database.g.dart';
     /// All Tables
     tables: [
       Users,
+      DrawRoutes,
+      InfoRoutes,
     ],
     /// All Daos
     daos: [
       UsersDao,
+      DrawRoutesDao,
+      InfoRoutesDao,
     ],
     /// All Queries
     queries: {
