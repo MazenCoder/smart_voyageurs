@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// import 'package:maps_toolkit/maps_toolkit.dart' as toolkite;
 import 'package:smart_voyageurs/features/login/domain/usecases/input_login.dart';
 import 'package:smart_voyageurs/core/injection/injection_container.dart';
 import 'package:smart_voyageurs/core/database/app_database.dart';
@@ -103,8 +104,10 @@ class AppUtilsImpl extends AppUtils {
   @override
   Future<List<LatLng>> getRoute(List<LatLng> latLngs, String mode) async {
     List<LatLng> _latLng = [];
+    print('mode: $mode');
     try {
-      String url = "https://maps.googleapis.com/maps/api/directions/json?origin=${latLngs.first.latitude},${latLngs.first.longitude}&destination=${latLngs.last.latitude},${latLngs.last.longitude}&mode=$mode&key=$apiKey";
+      String url = "https://maps.googleapis.com/maps/api/directions/json?origin=${latLngs.first.latitude},${latLngs.first.longitude}&destination=${latLngs.last.latitude},${latLngs.last.longitude}&mode=driving&key=$apiKey";
+      // String url = "https://maps.googleapis.com/maps/api/directions/json?origin=${latLngs.first.latitude},${latLngs.first.longitude}&destination=${latLngs.last.latitude},${latLngs.last.longitude}&mode=$mode&key=$apiKey";
       http.Response response = await client.get(url);
       Map values = jsonDecode(response.body);
       print("response.body: ${response.body}");
@@ -337,6 +340,30 @@ class AppUtilsImpl extends AppUtils {
         points.add(latLng);
       }
 
+      // for (var loc in locations) {
+      //   int val = toolkite.PolygonUtil.locationIndexOnPath(
+      //     toolkite.LatLng(loc.latitude, loc.longitude),
+      //       points2, false
+      //   );
+      //   print('------- $val ----------');
+      // }
+
+      /*
+      for (var loc in locations) {
+        return await GoogleMapPolyUtil.isLocationOnPath(
+            point: LatLng(loc.latitude, loc.longitude),
+            polygon: points
+        );
+      }
+
+      for (var loc in locations) {
+        return await GoogleMapPolyUtil.isLocationOnEdge(
+            point: LatLng(loc.latitude, loc.longitude),
+            polygon: points
+        );
+      }
+       */
+
       Polygon testPolygon = Polygon(
         polygonId: PolygonId(info.id),
         points: points,
@@ -359,8 +386,6 @@ class AppUtilsImpl extends AppUtils {
   }
 
   bool _pointInPolygon(LatLng position, Polygon polygon) {
-
-
 
     // Check if the point sits exactly on a vertex
     var vertexPosition = polygon.points.firstWhere((point) => point == position, orElse: () => null);

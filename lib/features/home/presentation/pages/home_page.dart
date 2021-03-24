@@ -1,3 +1,4 @@
+import 'package:get_it/get_it.dart';
 import 'package:smart_voyageurs/features/home/presentation/fragment/draw_fragment.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:smart_voyageurs/core/injection/injection_container.dart';
@@ -37,11 +38,11 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
 
   final _startController = TextEditingController();
   final _destinationController = TextEditingController();
-
+  final AppUtils appUtils = GetIt.I.get<AppUtils>();
   List<String> _listMode = ["driving", "walking", "bicycling", "transit"];
   List<String> _listModeDisplay = ["Taxi", "Marchant", "Vélo", "Tram"];
   static String googleAPIKey = 'AIzaSyDKcv0l6H4xJi8QGXBJgOeIv3qtCnksqDo';
-  double _originLatitude = 33.969825, _originLongitude = -6.842041;
+  double _originLatitude = 33.968849999999996, _originLongitude = -6.848730000000001;
   TextEditingController sourceController = TextEditingController();
   final Completer<GoogleMapController> _controller = Completer();
   StreamSubscription<Position> _positionStreamSubscription;
@@ -68,7 +69,7 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
 
   @override
   void afterFirstLayout(BuildContext context) async {
-    final polylines = await sl<AppUtils>().getAllPolyline();
+    final polylines = await appUtils.getAllPolyline();
     _mobx.polylines.addAll(polylines);
     print('afterFirstLayout');
   }
@@ -131,7 +132,7 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                     Text('Request location permission, '
                         'Access to the device\'s location has been denied, please '
                             'request permissions before continuing'),
-                    RaisedButton(
+                    TextButton(
                       child: const Text('Request permission'),
                       onPressed: () => requestPermission()
                           .then((status) => setState(_positions.clear)),
@@ -180,20 +181,20 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                               _mobx.addLatLng(location);
 
                               LoadingDialog.show(context);
-                              await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode.first).then((value) async {
+                              await appUtils.getRoute(_mobx.latlngs, _listMode.first).then((value) async {
                                 _mobx.setMode(_listModeDisplay.first);
                                 if (value.isNotEmpty) {
                                   _mobx.setPolyLine(true);
                                   _addPolyLine(value);
 
                                   //! check polygon
-                                  final isCut = await sl<AppUtils>().pointInPolygon(_mobx.latlngs, _mobx.mode);
+                                  final isCut = await appUtils.pointInPolygon(_mobx.latlngs, _mobx.mode);
                                   _mobx.setCutPolygon(isCut);
 
                                 }
                               }).whenComplete(() {
                                 LoadingDialog.hide(context);
-                                String dis = sl<AppUtils>().calculateDistance(_mobx.latlngs);
+                                String dis = appUtils.calculateDistance(_mobx.latlngs);
                                 if (dis != null || dis.isNotEmpty) {
                                   _mobx.cutPolygon ? print(dis) : FlashHelper.infoBar(context, message: "$dis km");
                                 }
@@ -206,7 +207,7 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                               _mobx.latlngs.clear();
                               _mobx.polylines.clear();
                               _mobx.setPolyLine(false);
-                              final _polylines = await sl<AppUtils>().getAllPolyline();
+                              final _polylines = await appUtils.getAllPolyline();
                               _mobx.polylines.addAll(_polylines);
                               for (int i = 0; i < _mobx.isSelected.length; i++) {
                                 _mobx.isSelected[i] = false;
@@ -219,9 +220,10 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                           // polylines: Set<Polyline>.of(polylines.values),
                           polylines: _mobx.polylines.toSet(),
                           initialCameraPosition: CameraPosition(
-                            target: _position != null ? LatLng(
-                              _mobx.latitude, _mobx.longitude,
-                            ) : LatLng(_originLatitude, _originLongitude),
+                            target: LatLng(_originLatitude, _originLongitude),
+                            // target: _position != null ? LatLng(
+                            //   _mobx.latitude, _mobx.longitude,
+                            // ) : LatLng(_originLatitude, _originLongitude),
                             zoom: _zoom,
                           ),
                           mapType: MapType.normal,
@@ -253,16 +255,16 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                                   print("mode: ${_listMode[index]}");
                                   _mobx.setMode(_listModeDisplay[index]);
 
-                                  final _polylines = await sl<AppUtils>().getAllPolyline();
+                                  final _polylines = await appUtils.getAllPolyline();
                                   _mobx.polylines.addAll(_polylines);
 
 
-                                  await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode[index]).then((value) async {
+                                  await appUtils.getRoute(_mobx.latlngs, _listMode[index]).then((value) async {
                                     if (value.isNotEmpty) {
                                       _addPolyLine(value);
 
                                       //! check polygon
-                                      final isCut = await sl<AppUtils>().pointInPolygon(_mobx.latlngs, _mobx.mode);
+                                      final isCut = await appUtils.pointInPolygon(_mobx.latlngs, _mobx.mode);
                                       _mobx.setCutPolygon(isCut);
 
                                     }
@@ -489,9 +491,9 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
                       width: MediaQuery.of(context).size.width,
                       child: Center(
                         child: Text('There is a route that has been added as: ${_mobx.mode} \n'
-                            //'Distance between two points is: ${sl<AppUtils>().calculateDistance(_mobx.latlngs)} km\n'
-                            'price for ${sl<AppUtils>().calculateDistance(_mobx.latlngs)} km is: '
-                            '${_calculatePrice(sl<AppUtils>().calculateDistance(_mobx.latlngs), _mobx.mode)}Dhs',
+                            //'Distance between two points is: ${appUtils.calculateDistance(_mobx.latlngs)} km\n'
+                            'price for ${appUtils.calculateDistance(_mobx.latlngs)} km is: '
+                            '${_calculatePrice(appUtils.calculateDistance(_mobx.latlngs), _mobx.mode)}Dhs',
                           maxLines: 2,
                           style: TextStyle(
                             color: Colors.white,
@@ -587,16 +589,16 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
         } else if (_mobx.markers.length == 2) {
           print("_mobx.markers.length == 1: ${_mobx.markers.length}");
           LoadingDialog.show(context);
-          await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode.first).then((value) {
+          await appUtils.getRoute(_mobx.latlngs, _listMode.first).then((value) {
             if (value.isNotEmpty) {
               _mobx.setPolyLine(true);
               _addPolyLine(value);
             }
           }).whenComplete(() async {
             LoadingDialog.hide(context);
-            String dis = sl<AppUtils>().calculateDistance(_mobx.latlngs);
+            String dis = appUtils.calculateDistance(_mobx.latlngs);
             if (dis != null || dis.isNotEmpty) {
-              _mobx.cutPolygon ? print(dis) : FlashHelper.infoBar(context, message: "$dis km");
+              _mobx.cutPolygon ? print("dis: $dis") : FlashHelper.infoBar(context, message: "$dis km");
             }
           });
         } else {
@@ -649,7 +651,7 @@ class _HomePageState extends State<HomePage> with AfterLayoutMixin<HomePage> {
         } else if (_mobx.latlngs.length == 2) {
           print("_mobx.markers.length == 2: ${_mobx.latlngs.length}");
           LoadingDialog.show(context);
-          await sl<AppUtils>().getRoute(_mobx.latlngs, _listMode.first).then((value) {
+          await appUtils.getRoute(_mobx.latlngs, _listMode.first).then((value) {
             if (value.isNotEmpty) {
               _mobx.setPolyLine(true);
               _addPolyLine(value);
